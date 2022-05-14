@@ -23,7 +23,7 @@
  */
 
 #define F_CPU                           (4000000UL)         /* using clock 4MHz*/
-#define UART_BAUD_RATE					(115200UL)
+#define UART_BAUD_RATE					(19200UL)
 #define USART0_BAUD_RATE(BAUD_RATE)     ((float)(64 * F_CPU / (16 * (float)BAUD_RATE)) + 0.5)
 
 #include <avr/io.h>
@@ -40,18 +40,20 @@
 #define INTERFACE_readByte()        USART_read()
 #define INTERFACE_writeByte(a)      USART_write(a)
 
+#define BOOTUPDELAYMS               250u //250ms delay
+
 /* Fuse configuration
  * BOOTSIZE sets the size (end) of the boot section in blocks of 512 bytes.
  * CODESIZE = 0x00 defines the section from BOOTSIZE*512 to end of Flash as application code.
  * Remaining fuses have configuration that the app depends on.
  */
 FUSES = {
-	.BODCFG = ACTIVE_DISABLE_gc | LVL_BODLEVEL0_gc | SAMPFREQ_128Hz_gc | SLEEP_DISABLE_gc,
+	.BODCFG = ACTIVE_DISABLE_gc | LVL_BODLEVEL0_gc | SAMPFREQ_32Hz_gc | SLEEP_DISABLE_gc,
 	.BOOTSIZE = BOOTSIZE_FUSE,
 	.CODESIZE = 0,
 	.OSCCFG = CLKSEL_OSCHF_gc,
-	.SYSCFG0 = CRCSEL_CRC16_gc | CRCSRC_NOCRC_gc | RSTPINCFG_GPIO_gc,
-	.SYSCFG1 = SUT_0MS_gc,
+	.SYSCFG0 = CRCSEL_CRC16_gc | CRCSRC_NOCRC_gc | RSTPINCFG_RST_gc,
+	.SYSCFG1 = SUT_64MS_gc,
 	.WDTCFG = PERIOD_OFF_gc | WINDOW_OFF_gc,
 };
 
@@ -83,6 +85,7 @@ static inline void STATUS_LED_init(void);
 static inline void STATUS_LED_toggle(void);
 static inline void STATUS_LED_set(void);
 static inline void STATUS_LED_clear(void);
+static void BUTTON_init(void);
 static uint8_t BUTTON_read(void);
 static inline void RS485_TXEN_init(void);
 static inline void RS485_TXEN_set(void);
@@ -102,8 +105,10 @@ __attribute__((naked)) __attribute__((section(".ctors"))) void boot(void)
     /* Initialize system for AVR GCC support, expects r1 = 0 */
     asm volatile("clr r1");
     
+    BUTTON_init();
     STATUS_LED_init();
     STATUS_LED_set();
+    _delay_ms(BOOTUPDELAYMS);
     /* Check if entering application or continuing to bootloader */
     if(!BOOTLOADER_isRequested()) 
     {
@@ -349,13 +354,18 @@ static inline void STATUS_LED_toggle(void)
 static inline void STATUS_LED_set(void)
 {
     /* Toggle LED0 (PF2) */
-    VPORTF.OUT |=  PIN2_bm;
+    VPORTF.OUT &=~  PIN2_bm;
 }
 
 static inline void STATUS_LED_clear(void)
 {
     /* Toggle LED0 (PF2) */
-    VPORTF.OUT &=  ~PIN2_bm;
+    VPORTF.OUT |=  PIN2_bm;
+}
+
+static void BUTTON_init(void)
+{
+    PORTF.PIN4CTRL =  PORT_PULLUPEN_bm;
 }
 
 static uint8_t BUTTON_read(void)

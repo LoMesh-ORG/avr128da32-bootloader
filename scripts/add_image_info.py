@@ -52,11 +52,12 @@ def addInfo(hex_file, flash_size, VMajor, Vminor):
 	ih = IntelHex()
 	fileextension = hex_file[-3:]
 	ih.loadfile(hex_file, format=fileextension)
-	append = ih.maxaddr()
+	#append = ih.maxaddr()
+	append = ih.segments()[0][1]
 	if (append > flashsize):
 		print ("Error: Flashsize input: %#06x, " % (flashsize) +
 			   "Minimum size needed: %#06x." % (append))
-		sys.exit(1)
+		#sys.exit(1)
 	appstart = ih.minaddr()
 	print ("\n","Start Address: %#06x" % (appstart ))
 	flashsize = ((append & 0xFFFFFE00) + 0x200)						# Round to multiple page number and add 0x200
